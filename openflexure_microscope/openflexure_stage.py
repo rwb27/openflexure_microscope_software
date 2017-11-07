@@ -25,6 +25,7 @@ class OpenFlexureStage(BasicSerialInstrument):
 
     @property
     def n_axes(self):
+        """The number of axes this stage has."""
         return len(self.axis_names)
     
     _backlash = None
@@ -34,11 +35,13 @@ class OpenFlexureStage(BasicSerialInstrument):
 
     @backlash.setter
     def backlash(self, blsh):
+        if blsh is None:
+            self._backlash = None
         try:
             assert len(blsh) == self.n_axes
-            self._backlash = blsh
+            self._backlash = np.array(blsh, dtype=np.int)
         except:
-            self._backlash = np.array([int(blsh)]*self.n_axes)
+            self._backlash = np.array([int(blsh)]*self.n_axes, dtype=np.int)
 
     def move_rel(self, displacement, axis=None, backlash=True):
         """Make a relative move, optionally correcting for backlash.
@@ -52,21 +55,36 @@ class OpenFlexureStage(BasicSerialInstrument):
 
         if axis is not None:
             # backlash correction is easier if we're always in 3D
-            assert axis in self.axis_names
-            move = np.zeros(self.n_axes)
-            move[np.argmax(np.array(self.axis_names) == axis)] = displacement
+            # so this code just converts single-axis moves into all-axis moves.
+            assert axis in self.axis_names, "axis must be one of {}".format(self.axis_names)
+            move = np.zeros(self.n_axes, dtype=np.int)
+            move[np.argmax(np.array(self.axis_names) == axis)] = int(displacement)
             displacement = move
 
-        initial_move = displacement
+        initial_move = np.array(displacement, dtype=np.int)
+        # Backlash Correction
+        # This backlash correction strategy ensures we're always approaching the 
+        # end point from the same direction, while minimising the amount of extra
+        # motion.  It's a good option if you're scanning in a line, for example,
+        # as it will kick in when moving to the start of the line, but not for each
+        # point on the line.  
+        # For each axis where we're moving in the *opposite*
+        # direction to self.backlash, we deliberately overshoot:
         initial_move -= np.where(self.backlash*displacement < 0,
-                                 self.backlash, np.zeros(self.n_axes))
+                                 self.backlash, np.zeros(self.n_axes, dtype=np.int))
         self._move_rel_nobacklash(initial_move)
         if np.any(displacement - initial_move != 0):
+            # If backlash correction has kicked in and made us overshoot, move
+            # to the correct end position (i.e. the move we were asked to make)
             self._move_rel_nobacklash(displacement - initial_move)
 
     def _move_rel_nobacklash(self, displacement, axis=None):
+        """Just make a move - no messing about with backlash correction!
+        
+        Arguments are as for move_rel, but backlash is False
+        """
         if axis is not None:
-            assert axis in self.axis_names, "Axis must be on of {}".format(self.axis_names)
+            assert axis in self.axis_names, "axis must be on of {}".format(self.axis_names)
             self.query("mr{} {}".format(axis, int(displacement)))
         else:
             #TODO: assert displacement is 3 integers
