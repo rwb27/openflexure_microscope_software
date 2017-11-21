@@ -82,6 +82,7 @@ if __name__ == '__main__':
                           "i/o to zoom in/out.\n"
                           "t/g to adjust contrast, y/h to adjust brightness.\n"
                           "j to save jpeg file, k to change output path.\n"
+                          "p to print current position, o to print AWB gains\n"
                           "x to quit\n")
             step = int(argv.get('<step>',100))
             filepath = validate_filepath(argv['--output'])
@@ -158,6 +159,14 @@ if __name__ == '__main__':
                         camera.annotate_text="Position '%s'" % str(stage.position)
                         try:
                             stdscr.addstr("Position '%s'\n" % str(stage.position))
+                        except:
+                            pass
+                        time.sleep(0.5)
+                        camera.annotate_text=""
+                    elif c == "o":
+                        camera.annotate_text="White balance {}".format(camera.awb_gains)
+                        try:
+                            stdscr.addstr("White balance {}".format(camera.awb_gains))
                         except:
                             pass
                         time.sleep(0.5)
