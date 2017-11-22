@@ -9,6 +9,6 @@ if __name__ == "__main__":
         camera.start_preview()
         
         time.sleep(3)
-		print "AWB Gains:"
+        print "AWB Gains:"
         print camera.awb_gains
 
