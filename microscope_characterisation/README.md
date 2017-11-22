@@ -10,7 +10,7 @@ In the case of the WaterScope image, you can control it with the following steps
 * Download and install [WinSCP](https://winscp.net/eng/download.php) to copy files across
 * Turn on the pi
 * Connect to waterscope_wifi (password waterscope)
-* Go to [[http://10.0.0.1/html/]] in a web browser and click "stop"
+* Go to http://10.0.0.1/html/ in a web browser and click "stop"
 * Open PuTTY, enter 10.0.0.1 as the address, and click "connect"
 
 ## Calibration protocol
@@ -33,7 +33,8 @@ First, find the centre of the USAF pattern using ``microscope_control.py`` above
 ```bash
 python microscope_control.py
 ```
-Press "v" to enable the video feed, and probably press "f" a couple of times to increase step size.  Use the arrow keys or WASD to move around, and Q/E to focus.  Once you have a sharp image of the centre of the USAF target (i.e. the smallest group), you can press "j" to save a JPEG image.  NB images you save using this program may be half-quality depending on the version, and they are stored in Desktop/images (you'll need to copy them into the experiment folder manually)
+Press "v" to enable the video feed, and probably press "f" a couple of times to increase step size.  Use the arrow keys or WASD to move around, and Q/E to focus.  Once you have a sharp image of the centre of the USAF target (i.e. the smallest group), you can press "j" to save a JPEG image.  NB images you save using this program may be half-quality depending on the version, and they are stored in Desktop/images (you'll need to copy them into the experiment folder manually).  You should have something that looks like the image below - don't worry if it's not the right way up, or if it's slightly squint (the analysis program can cope with some amount of tilt).
+![Example image of the centre of a USAF 1951 resolution target](example_usaf.jpg)
 
 Press "x" to quit the interactive program, and  save a full-resolution, raw image into the experiment folder with:
 ```bash
@@ -52,7 +53,10 @@ The arguments in the command above are
 2. The number of microsteps to move
 3. The number of images to acquire
 
-Next, centre the vertical edge of a large square in the field of view and run:
+Next, run ``python microscope_control.py`` again, and centre the vertical edge of a large square in the field of view.  You should see something that looks like the image below:
+![Example image of a vertical edge](example_v_edge.jpg)
+
+As before, exit the control script by pressing "x" and run:
 ```bash
 python measure_distortion.py ce/distortion_v 40 0 40
 ```
@@ -73,7 +77,10 @@ Arguments:
 3. (optional) shift in Y (use 0)
 This takes a z stack of images of the edge after autofocusing.  If you specify the optional X and Y shifts, it does this three times, once in the centre and once either side.  The repeated version is useful because it measures the resolution at the edges of the image, rather than just in the centre.
 
-Using ``python microscope_control.py`` as before, centre a horizontal edge in the field of view and repeat the above tests for the horizontal edge:
+Using ``python microscope_control.py`` as before, centre a horizontal edge in the field of view, so you have an image like the one below:
+![Example image of a horizontal edge](example_h_edge.jpg)
+
+Now, repeat the above tests for the horizontal edge:
 ```bash
 python measure_distortion.py ce/distortion_h 0 40 30
 python scan_edge.py ce/horizontal_edge_zstacks
