@@ -89,7 +89,7 @@ python measure_distortion.py ce/distortion_h 0 40 30
 python scan_edge.py ce/horizontal_edge_zstacks
 ```
 
-You should now have four folders of edge images, plus the USAF target images, plus (optionally) a Z-stack series of USAF images.  This is everything you need to run the [analysis scripts](https://github.com/rwb27/usaf_analysis/) on, and characterise the microscope.  To shut down the pi, type:
+You should now have four folders of edge images, plus the USAF target images, plus (optionally) a Z-stack series of USAF images.  This is everything you need to run the [analysis scripts](https://github.com/rwb27/usaf_analysis/) on, and characterise the microscope.  Copy those files and folders off the Pi (using a USB stick or WinSCP) for analysis later.  To shut down the pi, type:
 ```bash
 sudo shutdown -h now
 ```
