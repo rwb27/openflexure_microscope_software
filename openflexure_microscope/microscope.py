@@ -1,3 +1,4 @@
+from __future__ import print_function
 import picamera
 import picamera.array
 import cv2
@@ -72,6 +73,7 @@ class Microscope(object):
         g = self.cam.awb_gains
         self.cam.awb_mode = "off"
         self.cam.awb_gains = g
+        print("Camera settings are frozen.  Analogue gain: {}, Digital gain: {}, Exposure speed: {}, AWB gains: {}".format(self.cam.analog_gain, self.cam.digital_gain, self.cam.exposure_speed, self.cam.awb_gains)
         time.sleep(wait_after)
 
     def scan_linear(self, rel_positions, backlash=True, return_to_start=True):
@@ -170,5 +172,5 @@ if __name__ == "__main__":
         
     plt.show()
  
-    print "Done :)"
+    print("Done :)")
 
