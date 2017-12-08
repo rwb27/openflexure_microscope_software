@@ -16,20 +16,24 @@ In the case of the WaterScope image, you can control it with the following steps
 ## Calibration protocol
 This is a simple protocol to acquire lots of images of edges, which can then be used to recover the resolution and distortion of a microscope.  It is designed to use a USAF calibration target, but if that's not available, any slide with horizontal and vertical edges will work.  This script should be run on a Raspberry Pi connected to an [Openflexure Microscope](https://github.com/rwb27/openflexure_microscope), using the ["Sangaboard" motor controller](https://github.com/rwb27/openflexure_nano_motor_controller).  
 
-From an SSH terminal or from the command line, change to the directory where the control scripts are located, and run microscope_control.  For example:
+From an SSH terminal or from the command line, change to the directory where the control scripts are located, for example:
 ```bash
 cd microscope_rwb
+```
+To control the microscope (to move the stage interactively, take pictures, etc.) type:
+```bash
 python microscope_control.py 
 ```
+It will display the keyboard commands on-screen when it starts.  Press `b` to close the preview window, or `x` to exit the program.
 
-To make a new directory for experiments, and make a shortcut:
+To make a new directory for experiments, and make a shortcut, use the command prompt and type:
 ```bash
 mkdir cambridge_100x_plan_ac127
 ln -s cambridge_100x_plan_ac127/ ce
 ```
 This will create a directory called ``cambridge_100x_plan_ac127`` and create a "symbolic link" (a sort of shortcut) called ``ce``.  This saves a lot of typing in later commands.
 
-First, find the centre of the USAF pattern using ``microscope_control.py`` above - i.e. you type:
+First, find the centre of the USAF pattern using ``microscope_control.py`` as described above:
 ```bash
 python microscope_control.py
 ```
@@ -49,9 +53,9 @@ Optionally, you can save a Z-stack of the USAF target:
 ```bash
 python acquire_zstack.py ce/usaf_zstack 100 20
 ```
-The arguments in the command above are
+The arguments in the command above are:
 1. The folder where you want to save images (nb it should not exist - you can remove it with rmdir ce/usaf_zstack if the command failed previously)
-2. The number of microsteps to move
+2. The number of microsteps to move (100 is appropriate for a 40x objective, 40 or even 20 is appropriate for 100x)
 3. The number of images to acquire
 
 Next, run ``python microscope_control.py`` again, and centre the vertical edge of a large square in the field of view.  You should see something that looks like the image below:
