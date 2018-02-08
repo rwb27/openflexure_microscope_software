@@ -1,9 +1,9 @@
-__author__ = 'Richard Bowman
+__author__ = 'Richard Bowman'
 
 from setuptools import setup, find_packages
 
-setup(name='openflexure_microscope
-      version='0.1'
+setup(name='openflexure_microscope',
+      version='0.1',
       description='Control scripts for the OpenFlexure Microscope',
       url='http://www.github.com/rwb27/openflexure_microscope',
       author='Richard Bowman',

@@ -1,5 +1,6 @@
 from __future__ import print_function
 import picamera
+from picamera import PiCamera
 import picamera.array
 import cv2
 import numpy as np
@@ -8,6 +9,7 @@ from scipy import ndimage
 import time
 import matplotlib.pyplot as plt
 from openflexure_stage import OpenFlexureStage
+from contextlib import contextmanager
 
 picam2_full_res = (3280, 2464)
 picam2_half_res = tuple([d/2 for d in picam2_full_res])
@@ -38,16 +40,21 @@ def sharpness_edge(image):
 
 class Microscope(object):
     def __init__(self, camera=None, stage=None):
-        """Not bothering with context manager yet!"""
-        self.cam = camera
+        """Create the microscope object.  The camera and stage should already be initialised."""
+        self.camera = camera
         self.stage = stage
+
+    def close(self):
+        """Shut down the microscope hardware."""
+        self.camera.close()
+        self.stage.close()
 
     def rgb_image_old(self, use_video_port=True):
         """Capture a frame from a camera and output to a numpy array"""
-        res = round_resolution(self.cam.resolution)
+        res = round_resolution(self.camera.resolution)
         shape = (res[1], res[0], 3)
         buf = np.empty(np.product(shape), dtype=np.uint8)
-        self.cam.capture(buf, 
+        self.camera.capture(buf, 
                 format='rgb', 
                 use_video_port=use_video_port)
         #get an image, see picamera.readthedocs.org/en/latest/recipes2.html
@@ -55,8 +62,8 @@ class Microscope(object):
 
     def rgb_image(self, use_video_port=True, resize=None):
         """Capture a frame from a camera and output to a numpy array"""
-        with picamera.array.PiRGBArray(self.cam, size=resize) as output:
-            self.cam.capture(output, 
+        with picamera.array.PiRGBArray(self.camera, size=resize) as output:
+            self.camera.capture(output, 
                     format='rgb', 
                     resize=resize,
                     use_video_port=use_video_port)
@@ -66,49 +73,15 @@ class Microscope(object):
     def freeze_camera_settings(self, iso=None, wait_before=2, wait_after=0.5):
         """Turn off as much auto stuff as possible"""
         if iso is not None:
-            self.cam.iso = iso
+            self.camera.iso = iso
         time.sleep(wait_before)
-        self.cam.shutter_speed = self.cam.exposure_speed
-        self.cam.exposure_mode = "off"
-        g = self.cam.awb_gains
-        self.cam.awb_mode = "off"
-        self.cam.awb_gains = g
-        print("Camera settings are frozen.  Analogue gain: {}, Digital gain: {}, Exposure speed: {}, AWB gains: {}".format(self.cam.analog_gain, self.cam.digital_gain, self.cam.exposure_speed, self.cam.awb_gains)
+        self.camera.shutter_speed = self.camera.exposure_speed
+        self.camera.exposure_mode = "off"
+        g = self.camera.awb_gains
+        self.camera.awb_mode = "off"
+        self.camera.awb_gains = g
+        print("Camera settings are frozen.  Analogue gain: {}, Digital gain: {}, Exposure speed: {}, AWB gains: {}".format(self.camera.analog_gain, self.camera.digital_gain, self.camera.exposure_speed, self.camera.awb_gains))
         time.sleep(wait_after)
-
-    def scan_linear(self, rel_positions, backlash=True, return_to_start=True):
-        """Scan through a list of (relative) positions (generator fn)
-        
-        rel_positions should be an nx3-element array (or list of 3 element arrays).  
-        Positions should be relative to the starting position - not a list of relative moves.
-
-        backlash argument is passed to the stage (default true)
-        
-        if return_to_start is True (default) we return to the starting position after a
-        successful scan.  NB we always attempt to return to the starting position if the
-        scan was unsuccessful.
-        """
-        starting_position = self.stage.position
-        rel_positions = np.array(rel_positions)
-        assert rel_positions.shape[1] == 3, ValueError("Positions should be 3 elements long.")
-        try:
-            self.stage.move_rel(rel_positions[0], backlash=backlash)
-            yield 0
-
-            for i, step in enumerate(np.diff(rel_positions, axis=0)):
-                self.stage.move_rel(step, backlash=backlash)
-                yield i+1
-        except Exception as e:
-            return_to_start = True # always return to start if it went wrong.
-            raise e
-        finally:
-            if return_to_start:
-                self.stage.move_abs(starting_position, backlash=backlash)
-
-    def scan_z(self, dz, **kwargs):
-        """Scan through a list of (relative) z positions (generator fn)"""
-        return self.scan_linear([[0,0,z] for z in dz], **kwargs)
-
 
     def autofocus(self, dz, backlash=0, settle=0.5, metric_fn=sharpness_sum_lap2):
         """Perform a simple autofocus routine.
@@ -122,29 +95,75 @@ class Microscope(object):
         """
         sharpnesses = []
         positions = []
-        def z():
-            return self.stage.position[2]
-        def measure():
+        for i in self.stage.scan_z(dz):
+            positions.append(self.stage.position[2])
             time.sleep(settle)
             sharpnesses.append(metric_fn(self.rgb_image(
                         use_video_port=True, 
                         resize=(640,480))))
-            positions.append(z())
-
-        self.stage.focus_rel(dz[0]-backlash)
-        self.stage.focus_rel(backlash)
-        measure()
-
-        for step in np.diff(dz):
-            self.stage.focus_rel(step)
-            measure()
-           
         newposition = positions[np.argmax(sharpnesses)]
-
-        self.stage.focus_rel(newposition - backlash - z())
-        self.stage.focus_rel(backlash)
-
+        self.stage.focus_rel(newposition - self.stage.position[2], backlash=backlash)
         return positions, sharpnesses
+
+    def settings_dict(self):
+        """Return all the relevant settings as a dictionary."""
+        settings = {}
+        for k in ["digital_gain", "analog_gain", "awb_mode", "awb_gains", "shutter_speed", "lens_shading_table", "resolution"]:
+            settings[k] = getattr(self.camera, k)
+        return settings
+
+    def save_settings(self, npzfile):
+        "Save the microscope's current settings to an npz file"
+        np.savez(npzfile, **self.settings_dict())
+
+@contextmanager
+def load_microscope(npzfile=None, save_settings=False, **kwargs):
+    """Create a microscope object with specified settings. (context manager)
+
+    This will read microscope settings from a .npz file, and/or from
+    keyword arguments.  It will then create the microscope object, and
+    close it at the end of the with statement.  Keyword arguments will
+    override settings specified in the file.
+
+    If save_settings is
+    True, it will attempt to save the microscope's settings at the end of
+    the with block, to the same filename.  If save_settings_on_exit is set
+    to a string, it should save instead to that filename.
+    """
+    settings = {}
+    try:
+        npz = np.load(npzfile)
+        for k in npz:
+            settings[k] = npz[k]
+    except:
+        pass
+    settings.update(kwargs)
+
+    if "stage_port" in settings:
+        stage_port = settings["stage_port"]
+        del settings["stage_port"]
+    else:
+        stage_port = None
+
+    picamera_init_settings = {}
+    picamera_later_settings = {}
+    for k in settings:
+        if k in ['resolution', 'lens_shading_table']:
+            picamera_init_settings[k] = settings[k]
+        elif k in ['awb_mode', 'awb_gains', 'shutter_speed', 'analog_gain', 'digital_gain']:
+            picamera_later_settings[k] = settings[k]
+
+    with OpenFlexureStage(stage_port) as stage, \
+                 PiCamera(**picamera_init_settings) as camera:
+        ms = Microscope(camera, stage)
+        for k in picamera_later_settings:
+            setattr(ms.camera, k, picamera_later_settings[k])
+        yield ms
+        if save_settings:
+            if save_settings is True:
+                save_settings = npzfile
+            ms.save_settings(save_settings)
+
 
 
 if __name__ == "__main__":
