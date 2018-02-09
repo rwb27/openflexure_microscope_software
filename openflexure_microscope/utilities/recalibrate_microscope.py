@@ -1,6 +1,7 @@
 from __future__ import print_function
 from .. import microscope
 import picamera.array
+import picamera
 import numpy as np
 import sys
 
@@ -8,14 +9,18 @@ if __name__ == '__main__':
     try:
         output_fname = sys.argv[1]
     except:
-        output_fname = "lens_shading_table.npz"
+        output_fname = "microscope_settings.npz"
     # Start by loading the raw image from the Pi camera.  This creates a ``picamera.PiBayerArray``.
-    with microscope.load_microscope() as ms:
+    with picamera.PiCamera() as cam:
+        lens_shading_table = np.zeros(cam._lens_shading_table_shape(), dtype=np.uint8) + 32
+        max_res = cam.MAX_RESOLUTION
+    with microscope.load_microscope(lens_shading_table=lens_shading_table,
+                                    resolution=max_res) as ms:
+        ms.camera.start_preview(resolution=(1080*4/3, 1080))
         ms.freeze_camera_settings()
         pi_bayer_array = picamera.array.PiBayerArray(ms.camera)
         ms.camera.capture(pi_bayer_array, format="jpeg", bayer=True)
         settings = ms.settings_dict()
-        white_image = pi_bayer_array.demosaic()
         bayer_array_array = pi_bayer_array.array
     for k in settings:
         print("{}: {}".format(k, settings[k]))
@@ -26,8 +31,7 @@ if __name__ == '__main__':
     bayer_data = bayer_array_array.sum(axis=2) #16-bit bayer data
     # We need to figure out which pixels to assign to which channels
     bayer_pattern = [(i//2, i%2) for i in range(4)]
-    print("loaded an image, {}".format(white_image.shape))
-    full_resolution = white_image.shape[:2]
+    full_resolution = bayer_data.shape
     table_resolution = [(r // 64) + 1 for r in full_resolution]
     lens_shading = np.zeros([4] + table_resolution, dtype=np.float)
     
@@ -75,3 +79,8 @@ if __name__ == '__main__':
     settings['lens_shading_table'] = lens_shading_table
     np.savez(output_fname, **settings)
     print("Lens shading table written to {}".format(output_fname))
+    print("Double-checking settings saved OK")
+    npz = np.load(output_fname)
+    for k in npz:
+        print("{}: {}".format(k, npz[k]))
+

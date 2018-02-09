@@ -14,6 +14,15 @@ from contextlib import contextmanager
 picam2_full_res = (3280, 2464)
 picam2_half_res = tuple([d/2 for d in picam2_full_res])
 picam2_quarter_res = tuple([d/4 for d in picam2_full_res])
+picamera_init_settings = {"lens_shading_table": None, "resolution": tuple}
+picamera_later_settings = {"awb_mode":str, 
+                           "awb_gains":tuple,
+                           "shutter_speed":"[()]",
+                           "analog_gain":"[()]",
+                           "digital_gain":"[()]",
+                           "brightness":"[()]",
+                           "contrast":"[()]",
+                           }
 
 def round_resolution(res):
     """Round up the camera resolution to units of 32 and 16 in x and y"""
@@ -71,7 +80,7 @@ class Microscope(object):
             return output.array
 
     def freeze_camera_settings(self, iso=None, wait_before=2, wait_after=0.5):
-        """Turn off as much auto stuff as possible"""
+        """Turn off as much auto stuff as possible (except lens shading)"""
         if iso is not None:
             self.camera.iso = iso
         time.sleep(wait_before)
@@ -108,7 +117,7 @@ class Microscope(object):
     def settings_dict(self):
         """Return all the relevant settings as a dictionary."""
         settings = {}
-        for k in ["digital_gain", "analog_gain", "awb_mode", "awb_gains", "shutter_speed", "lens_shading_table", "resolution"]:
+        for k in picamera_later_settings.keys() + picamera_init_settings.keys():
             settings[k] = getattr(self.camera, k)
         return settings
 
@@ -116,6 +125,43 @@ class Microscope(object):
         "Save the microscope's current settings to an npz file"
         np.savez(npzfile, **self.settings_dict())
 
+
+def extract_settings(source_dict, converters):
+    """Extract a subset of a dictionary of settings.
+
+    For each item in ``source_dict`` that shares a key with an item in
+    ``converters``, return a dictionary of values that have been
+    processed using the conversion functions in the second dict.
+
+    NB "None" is equivalent to no processing, to save some typing.
+    There are some special string values for converters:
+    "[()]" will convert a 0-dimensional numpy array to a scalar
+    "[0]" will return the first element of a 1D array
+    If either "[()]" or "[0]" is specified and raises an exception,
+    then we fall back to no processing.  This is good if the values
+    might be from a numpy ``.npz`` file, or might be specified directly.
+    """
+    settings = {}
+    for k in source_dict:
+        if k in converters:
+            if converters[k] is None:
+                settings[k] = source_dict[k]
+            elif converters[k] == "[()]":
+                try:
+                    settings[k] = source_dict[k][()]
+                except:
+                    settings[k] = source_dict[k]
+            elif converters[k] == "[0]":
+                try:
+                    settings[k] = source_dict[k][0]
+                except:
+                    settings[k] = settings[k]
+            else:
+                settings[k] = converters[k](source_dict[k])
+    return settings
+
+
+#
 @contextmanager
 def load_microscope(npzfile=None, save_settings=False, **kwargs):
     """Create a microscope object with specified settings. (context manager)
@@ -145,20 +191,13 @@ def load_microscope(npzfile=None, save_settings=False, **kwargs):
     else:
         stage_port = None
 
-    picamera_init_settings = {}
-    picamera_later_settings = {}
-    for k in settings:
-        if k in ['resolution', 'lens_shading_table']:
-            picamera_init_settings[k] = settings[k]
-        elif k in ['awb_mode', 'awb_gains', 'shutter_speed', 'analog_gain', 'digital_gain']:
-            picamera_later_settings[k] = settings[k]
 
     with OpenFlexureStage(stage_port) as stage, \
-                 PiCamera(**picamera_init_settings) as camera:
+                 PiCamera(**extract_settings(settings, picamera_init_settings)) as camera:
         ms = Microscope(camera, stage)
-        for k in picamera_later_settings:
-            setattr(ms.camera, k, picamera_later_settings[k])
-        yield ms
+        for k, v in extract_settings(settings, picamera_later_settings).items():
+            setattr(ms.camera, k, v)
+        yield ms # The contents of the with block from which we're called happen here
         if save_settings:
             if save_settings is True:
                 save_settings = npzfile
