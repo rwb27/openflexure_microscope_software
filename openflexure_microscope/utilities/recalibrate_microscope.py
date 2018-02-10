@@ -3,6 +3,7 @@ from .. import microscope
 import picamera.array
 import picamera
 import numpy as np
+import time
 import sys
 
 if __name__ == '__main__':
@@ -79,8 +80,6 @@ if __name__ == '__main__':
     settings['lens_shading_table'] = lens_shading_table
     np.savez(output_fname, **settings)
     print("Lens shading table written to {}".format(output_fname))
-    print("Double-checking settings saved OK")
-    npz = np.load(output_fname)
-    for k in npz:
-        print("{}: {}".format(k, npz[k]))
-
+    with microscope.load_microscope(output_fname) as ms:
+        ms.camera.start_preview(resolution=(1080*4//3, 1080))
+        time.sleep(3)

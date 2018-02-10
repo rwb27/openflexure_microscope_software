@@ -9,7 +9,7 @@ from scipy import ndimage
 import time
 import matplotlib.pyplot as plt
 from openflexure_stage import OpenFlexureStage
-from contextlib import contextmanager
+from contextlib import contextmanager, closing
 
 picam2_full_res = (3280, 2464)
 picam2_half_res = tuple([d/2 for d in picam2_full_res])
@@ -192,8 +192,8 @@ def load_microscope(npzfile=None, save_settings=False, **kwargs):
         stage_port = None
 
 
-    with OpenFlexureStage(stage_port) as stage, \
-                 PiCamera(**extract_settings(settings, picamera_init_settings)) as camera:
+    with closing(OpenFlexureStage(stage_port)) as stage, \
+         closing(PiCamera(**extract_settings(settings, picamera_init_settings))) as camera:
         ms = Microscope(camera, stage)
         for k, v in extract_settings(settings, picamera_later_settings).items():
             setattr(ms.camera, k, v)
