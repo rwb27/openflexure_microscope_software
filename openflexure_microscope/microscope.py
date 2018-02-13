@@ -2,7 +2,6 @@ from __future__ import print_function
 import picamera
 from picamera import PiCamera
 import picamera.array
-import cv2
 import numpy as np
 import scipy
 from scipy import ndimage
