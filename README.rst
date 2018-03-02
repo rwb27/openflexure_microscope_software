@@ -6,17 +6,13 @@ This repository contains the scripts that run the openflexure microscope.  The b
 
 Installation
 ------------
-These scripts currently depend on a few things that aren't included in standard Raspbian and aren't easily installed with pip.  First, you need to install the updated `userland libraries <https://github.com/raspberrypi/userland>`_.  The simplest option is to download and compile - this takes around 15 mins on my Pi 3:
-
-.. code-block:: bash
+These scripts currently depend on a few things that aren't included in standard Raspbian and aren't easily installed with pip.  First, you need to install the updated `userland libraries <https://github.com/raspberrypi/userland>`_.  The simplest option is to download and compile - this takes around 15 mins on my Pi 3::
    git clone https://github.com/raspberrypi/userland.git
    cd userland
    ./buildme
    cd ..
    
-After installing userland, you need to install `my fork of picamera <https://github.com/rwb27/picamera/tree/lens-shading>`_:
-
-.. code-block:: bash
+After installing userland, you need to install `my fork of picamera <https://github.com/rwb27/picamera/tree/lens-shading>`_::
    git clone https://github.com/rwb27/picamera.git
    cd picamera
    git checkout lens-shading
@@ -25,9 +21,7 @@ After installing userland, you need to install `my fork of picamera <https://git
    
 If you get a permissions error, it may be that you need to prefix the ``python setup.py install`` line with ``sudo`` or perhaps adjust your Python install location.
 
-After installing these libraries, you can install this software the same way:
-
-.. code-block:: bash
+After installing these libraries, you can install this software the same way::
    git clone https://github.com/rwb27/openflexure_microscope_software.git
    cd openflexure_microscope_software
    python setup.py install
