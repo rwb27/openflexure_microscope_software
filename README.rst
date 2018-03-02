@@ -35,6 +35,14 @@ Usage
 -----
 The module installs a command-line script.  Run ``openflexure_microscope`` to start an interactive control program, or ``openflexure_microscope help`` to see options.
 
+Development
+-----------
+If you want to be able to modify the scripts, instead of installing with ``python setup.py install``, use ``python setup.py develop``.  This leaves the scripts in the folder where they have been downloaded, but still links them into your system's Python path.  That will allow you to run them as normal, but makes them easier to edit.  Don't forget to commit your changes to Github - this may be easier if you first fork the repository on Github, then clone and install your copy of it.  This is relatively simple: first, click the "fork" button at the top right of this repository's page - that will create a repository in your account.  Next, go to that repository, and copy the URL from the "clone or download" link.  It should look like ``https://github.com/your_username/openflexure_microscope_software.git``.  Then, replace my URL with yours, and run the same commands::
+
+   git clone https://github.com/your_username/openflexure_microscope_software.git
+   cd openflexure_microscope_software
+   python setup.py develop
+
 Characterisation scripts
 ------------------------
 The `microscope_characterisation folder <./microscope_characterisation>`_ contains scripts for measuring the resolution, distortion, and pixels-to-microns calibration.  These are intended to produce images you then analyse with the [USAF analysis scripts](https://github.com/rwb27/usaf_analysis).
