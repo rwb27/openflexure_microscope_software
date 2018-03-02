@@ -1,13 +1,44 @@
-# openflexure_microscope_software
-Python scripts to run the OpenFlexure Microscope
+openflexure_microscope_software
+===============================
+Python module to run the OpenFlexure Microscope
 
-This collection of scripts is what I use to run the OpenFlexure microscope.  It is not yet a proper Python module, although it should be.
+This repository contains the scripts that run the openflexure microscope.  The bulk of the useful code is contained in the Python module ``openflexure_microscope``, though there are some control scripts for characterisation experiments that currently live in a separate folder.  These will be integrated into the main control program in due course.
 
-## Microscope control scripts
-The ``openflexure_microscope`` folder contains the scripts I use to run the microscope.  These include a library for the stage, and another one with utility functions for running the camera.  There's also ``microscope_control.py`` for interactive control of the microscope.
+Installation
+------------
+These scripts currently depend on a few things that aren't included in standard Raspbian and aren't easily installed with pip.  First, you need to install the updated `userland libraries <https://github.com/raspberrypi/userland`_.  The simplest option is to download and compile - this takes around 15 mins on my Pi 3:
 
-## Characterisation scripts
-The [``microscope_characterisation``](microscope_characterisation) folder contains scripts for measuring the resolution, distortion, and pixels-to-microns calibration.  These are intended to produce images you then analyse with the [USAF analysis scripts](https://github.com/rwb27/usaf_analysis).
+.. code-block:: bash
+   git clone https://github.com/raspberrypi/userland.git
+   cd userland
+   ./buildme
+   cd ..
+   
+After installing userland, you need to install `my fork of picamera <https://github.com/rwb27/picamera/tree/lens-shading>`_:
 
-## Usage
-Currently all these scripts live in one folder on my Pi - not in two folders as in this repository.  I'm working on organising them better...
+.. code-block:: bash
+   git clone https://github.com/rwb27/picamera.git
+   cd picamera
+   git checkout lens-shading
+   python setup.py install
+   cd ..
+   
+If you get a permissions error, it may be that you need to prefix the ``python setup.py install`` line with ``sudo`` or perhaps adjust your Python install location.
+
+After installing these libraries, you can install this software the same way:
+
+.. code-block:: bash
+   git clone https://github.com/rwb27/openflexure_microscope_software.git
+   cd openflexure_microscope_software
+   python setup.py install
+   
+This will automatically download and install the `libraries for the stage <https://github.com/rwb27/openflexure_nano_motor_controller>`_ via pip.  Once you have installed the module, you can run an interactive microscope control program by running the command ``openflexure_microscope`` in the terminal.
+
+Usage
+-----
+The module installs a command-line script.  Run ``openflexure_microscope`` to start an interactive control program, or ``openflexure_microscope help`` to see options.
+
+Characterisation scripts
+------------------------
+The `microscope_characterisation folder <./microscope_characterisation>`_ contains scripts for measuring the resolution, distortion, and pixels-to-microns calibration.  These are intended to produce images you then analyse with the [USAF analysis scripts](https://github.com/rwb27/usaf_analysis).
+
