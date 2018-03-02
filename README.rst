@@ -6,7 +6,7 @@ This repository contains the scripts that run the openflexure microscope.  The b
 
 Installation
 ------------
-These scripts currently depend on a few things that aren't included in standard Raspbian and aren't easily installed with pip.  First, you need to install the updated `userland libraries <https://github.com/raspberrypi/userland`_.  The simplest option is to download and compile - this takes around 15 mins on my Pi 3:
+These scripts currently depend on a few things that aren't included in standard Raspbian and aren't easily installed with pip.  First, you need to install the updated `userland libraries <https://github.com/raspberrypi/userland>`_.  The simplest option is to download and compile - this takes around 15 mins on my Pi 3:
 
 .. code-block:: bash
    git clone https://github.com/raspberrypi/userland.git
