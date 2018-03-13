@@ -41,10 +41,12 @@ setup(name = 'openflexure_microscope',
       install_requires = [
           'pyserial',
           'openflexure_stage',
-          'picamera',
           'numpy',
           'scipy',
           'matplotlib',
+          ],
+      dependency_links = [
+          'https://github.com/rwb27/picamera/tarball/lens-shading'
           ],
       entry_points = {
           'console_scripts': [

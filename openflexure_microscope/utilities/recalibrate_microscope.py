@@ -6,11 +6,14 @@ import numpy as np
 import time
 import sys
 
-if __name__ == '__main__':
-    try:
-        output_fname = sys.argv[1]
-    except:
-        output_fname = "microscope_settings.npz"
+
+def recalibrate_microscope(output_fname="microscope_settings.npz"):
+    """Acquire a raw image, and use it to recalculate the lens shading table.
+
+    All microscope settings will be reset, a few seconds of auto-exposure will
+    be run, then the new settings will be saved to the output file along with a
+    lens shading table that makes the image, as measured, roughly white.
+    """
     # Start by loading the raw image from the Pi camera.  This creates a ``picamera.PiBayerArray``.
     with picamera.PiCamera() as cam:
         lens_shading_table = np.zeros(cam._lens_shading_table_shape(), dtype=np.uint8) + 32
@@ -83,3 +86,10 @@ if __name__ == '__main__':
     with microscope.load_microscope(output_fname) as ms:
         ms.camera.start_preview(resolution=(1080*4//3, 1080))
         time.sleep(3)
+
+
+if __name__ == '__main__':
+    try:
+        output_fname = sys.argv[1]
+    except:
+        output_fname = "microscope_settings.npz"

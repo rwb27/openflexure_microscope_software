@@ -60,6 +60,24 @@ def parse_command_line_arguments():
     args = parser.parse_args()
     return args
 
+def adjust_attribute(obj, attrname, action, linear_increment=None, log_factor=None, minv=None, maxv=None):
+    """Increment, decrement, or change the value of a property.
+    
+    Arguments:
+        
+    obj: the object on which the property is to be adjusted
+    attrname: a string naming the property to be adjusted
+    action: a positive or negative number if the property is to be 
+        increased or decreased.  None for no change, and "?" to
+        prompt the user to enter a value.
+    linear_increment: a number that is added/subtracted
+    log_factor: a number by which the property is multiplied/divided
+    minv: a value below which the property can't be decreased
+    maxv: a value above which the property can't be increased
+    """
+    pass #pval = getattr(obj, attrname)
+
+
 
 def control_microscope_with_keyboard(output="./images"):
     filepath = validate_filepath(output)
@@ -94,18 +112,15 @@ def control_microscope_with_keyboard(output="./images"):
             c = readkey()
             if c == 'x': #quit
                 break
-            elif c == 'w':
-                stage.move_rel([0,step,0])
-            elif c == 'a':
-                stage.move_rel([step,0,0])
-            elif c == 's':
-                stage.move_rel([0,-step,0])
-            elif c == 'd':
-                stage.move_rel([-step,0,0])
-            elif c == 'q':
-                stage.move_rel([0,0,-step])
-            elif c == 'e':
-                stage.move_rel([0,0,step])
+            elif c in ['w', 'a', 's', 'd', 'q', 'e']:
+                # move the stage with quake-style keys
+                move = {'w': [0,step,0],
+                        'a': [step,0,0],
+                        's': [0,-step,0],
+                        'd': [-step,0,0],
+                        'q': [0,0,-step],
+                        'e': [0,0,step]}[c]
+                stage.move_rel(move)
             elif c == "r":
                 step /= 2
             elif c == "f":
@@ -118,12 +133,12 @@ def control_microscope_with_keyboard(output="./images"):
                     fov *= 4.0/3.0
                 camera.zoom = (0.5-fov/2, 0.5-fov/2, fov, fov)
             elif c in ['[', ']', '-', '_', '=', '+']:
-                if c in ['[', ']']:
+                if c in ['[', ']']: # scroll through parameters
                     N = len(adjustable_parameters)
                     d = 1 if c == ']' else -1
                     current_parameter = (current_parameter + N + d) % N
                     change = 0
-                elif c in ['+', '=']:
+                elif c in ['+', '=']: # change the current parameter
                     change = 1
                 else:
                     change = -1
@@ -151,15 +166,15 @@ def control_microscope_with_keyboard(output="./images"):
                         camera.digital_gain /= 1.25
                     pval = camera.digital_gain
                 elif pname == "brightness":
-                    if change > 1 and camera.brightness <= 90:
+                    if change > 0 and camera.brightness <= 90:
                         camera.brightness += 10
-                    if change < -1 and camera.brightness >= 10:
+                    if change < 0 and camera.brightness >= 10:
                         camera.brightness -= 10
                     pval = camera.brightness
                 elif pname == "contrast":
-                    if change > 1 and camera.contrast <= 90:
+                    if change > 0 and camera.contrast <= 90:
                         camera.contrast += 10
-                    if change < -1 and camera.contrast >= 10:
+                    if change < 0 and camera.contrast >= 10:
                         camera.contrast -= 10
                     pval = camera.contrast
                 elif pname == "awb_gains":
@@ -173,7 +188,8 @@ def control_microscope_with_keyboard(output="./images"):
                 else:
                     camera.annotate_text = ""
             elif c == "v":
-                camera.start_preview(resolution=(1080*4//3,1080))
+                #camera.start_preview(resolution=(1080*4//3,1080))
+                camera.start_preview(resolution=(489*4//3,480))
             elif c == "b":
                 camera.stop_preview()
             elif c == "j":
