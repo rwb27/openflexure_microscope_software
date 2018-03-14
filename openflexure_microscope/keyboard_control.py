@@ -154,8 +154,13 @@ class InteractiveCameraParameter(InteractiveParameter):
     @value.setter
     def value(self, newvalue):
         if not self.readonly:
-            print("setting {} to {} (converted from {}).".format(self.name, newvalue, self.setter_conversion(newvalue)))
-            setattr(self._camera, self.name, self.setter_conversion(newvalue))
+            try:
+                setattr(self._camera, self.name, self.setter_conversion(newvalue))
+                time.sleep(0.3) # We wait so that, when we read back the value, it has updated.
+                # the 0.3s time constant was determined by trial and error...
+            except:
+                print("Error setting camera.{} to {}.  Perhaps your version of "
+                      "picamera does not support it?".format(self.name, newvalue))
         else:
             print("Warning: {} is a read-only property.".format(self.name))
 
