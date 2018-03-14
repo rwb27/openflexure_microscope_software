@@ -77,6 +77,123 @@ def adjust_attribute(obj, attrname, action, linear_increment=None, log_factor=No
     """
     pass #pval = getattr(obj, attrname)
 
+class InteractiveParameter(object):
+    """This class is intended to allow a setting to be easily controlled.
+
+    The basic version allows the value to be picked from a list.
+    """
+    _value = None
+    name = ""
+    allowed_values = []
+    wrap = False
+
+    def __init__(self, name, allowed_values, wrap=False, initial_value=None, readonly=False):
+        """Create an object to manage a parameter.
+
+        name: the name of the setting
+        allowed_values: a list of values which are permitted
+        wrap: whether incrementing past the end wraps to the start.
+        """
+        self.name = name
+        self.allowed_values = allowed_values
+        self.wrap = wrap
+        self.readonly = readonly
+        if initial_value is None:
+            self._value = allowed_values[0]
+        else:
+            self._value = initial_value
+
+    @property
+    def value(self):
+        """The value of the property we're manipulating"""
+        return self._value
+    @value.setter
+    def value(self, newvalue):
+        if not self.readonly:
+            self._value = newvalue
+        else:
+            print("Warning: {} is a read-only property.".format(self.name))
+
+    def current_index(self):
+        """The index (in the allowed_values list) of the current value."""
+        try:
+            return list(self.allowed_values).index(self.value)
+        except ValueError:
+            try:
+                allowed = np.array(self.allowed_values)
+                return np.argmin((allowed - float(self.value))**2)
+            except:
+                print("Warning: the value of {} was {}, which is neither "
+                      "allowed nor numerical!".format(self.name, self.value))
+                return 0
+
+    def change(self, step):
+        """Change the value of this property by +/- 1 step"""
+        assert step in [-1, 1], "Step must be in [-1, 1]"
+        if self.readonly:
+            return #don't change the property if we can't change it!
+        i = self.current_index() + step
+        N = len(self.allowed_values)
+        if self.wrap:
+            i = (i + N) % N # this ensures we wrap if i would be invalid
+        if i >= 0 and i < N:
+            self.value = self.allowed_values[i]
+
+class InteractiveCameraParameter(InteractiveParameter):
+    """An InteractiveParameter to control a camera property."""
+    def __init__(self, camera, name, allowed_values, getter_conversion=lambda x: x, setter_conversion=lambda x: x, **kwargs):
+        """See InteractiveParameter for details - first arg is a PiCamera."""
+        self._camera = camera
+        self.getter_conversion = getter_conversion
+        self.setter_conversion = setter_conversion
+        InteractiveParameter.__init__(self, name, allowed_values, **kwargs)
+
+    @property
+    def value(self):
+        return self.getter_conversion(getattr(self._camera, self.name))
+    @value.setter
+    def value(self, newvalue):
+        if not self.readonly:
+            print("setting {} to {} (converted from {}).".format(self.name, newvalue, self.setter_conversion(newvalue)))
+            setattr(self._camera, self.name, self.setter_conversion(newvalue))
+        else:
+            print("Warning: {} is a read-only property.".format(self.name))
+
+class ReadOnlyObjectParameter(InteractiveParameter):
+    """A dummy InteractiveParameter that only reads things."""
+    def __init__(self, obj, name, filter_function=lambda x: x):
+        """Create a dummy parameter that reads a value from an object."""
+        self.obj = obj
+        self.filter_function = filter_function
+        InteractiveParameter.__init__(self, name, [None], readonly=True)
+
+    @property
+    def value(self):
+        return self.filter_function(getattr(self.obj, self.name))
+
+    def current_index(self):
+        return 0
+
+    def change(self, d):
+        pass
+
+
+def control_parameters_from_microscope(microscope):
+    """Create a list of InteractiveParameter objects to control a microscope."""
+    cam = microscope.camera
+    stage = microscope.stage
+    return [
+            InteractiveParameter(None, [None]), # TODO: find a nicer way to hide the parameter display!
+            InteractiveParameter("step_size", 2**np.arange(14), initial_value=256),
+            InteractiveCameraParameter(cam, "shutter_speed", 10.0**np.linspace(2,5,28), setter_conversion=int),
+            InteractiveCameraParameter(cam, "analog_gain", 2**np.linspace(-2,2,9)),
+            InteractiveCameraParameter(cam, "digital_gain", 2**np.linspace(-2,2,9)),
+            InteractiveCameraParameter(cam, "brightness", np.linspace(0,100,11), setter_conversion=int),
+            InteractiveCameraParameter(cam, "contrast", np.linspace(-50,50,11), setter_conversion=int),
+            ReadOnlyObjectParameter(cam, "awb_gains", filter_function=lambda (a, b): [float(a), float(b)]),
+            ReadOnlyObjectParameter(stage, "position", filter_function=str),
+            ]
+
 
 
 def control_microscope_with_keyboard(output="./images"):
@@ -93,38 +210,27 @@ def control_microscope_with_keyboard(output="./images"):
               "[/] to select camera parameters, and +/- to adjust them\n"
               "j to save jpeg file, k to change output path.\n"
               "x to quit")
-        step = 100
-        fov = 1
-        adjustable_parameters = [
-                None,
-                "step_size",
-                "shutter_speed",
-                "analog_gain",
-                "digital_gain",
-                "contrast", 
-                "brightness", 
-                "awb_gains",
-                "position",
-                ]
+        fov = 1 # TODO: turn this into a proper camera parameter
+        control_parameters = control_parameters_from_microscope(ms)
         current_parameter = 0
-            
+        step_param = control_parameters[1] #TODO: select this based on name
+        move_keys = {'w': [0,1,0],
+                     'a': [1,0,0],
+                     's': [0,-1,0],
+                     'd': [-1,0,0],
+                     'q': [0,0,-1],
+                     'e': [0,0,1]}
         while True:
             c = readkey()
             if c == 'x': #quit
                 break
-            elif c in ['w', 'a', 's', 'd', 'q', 'e']:
+            elif c in move_keys.keys():
                 # move the stage with quake-style keys
-                move = {'w': [0,step,0],
-                        'a': [step,0,0],
-                        's': [0,-step,0],
-                        'd': [-step,0,0],
-                        'q': [0,0,-step],
-                        'e': [0,0,step]}[c]
-                stage.move_rel(move)
+                stage.move_rel( np.array(move_keys[c]) * step_param.value)
             elif c == "r":
-                step /= 2
+                step_param.change(1)
             elif c == "f":
-                step *= 2
+                step_param.change(-1)
             elif c == 'i':
                 fov *= 0.75
                 camera.zoom = (0.5-fov/2, 0.5-fov/2, fov, fov)
@@ -134,62 +240,23 @@ def control_microscope_with_keyboard(output="./images"):
                 camera.zoom = (0.5-fov/2, 0.5-fov/2, fov, fov)
             elif c in ['[', ']', '-', '_', '=', '+']:
                 if c in ['[', ']']: # scroll through parameters
-                    N = len(adjustable_parameters)
+                    N = len(control_parameters)
                     d = 1 if c == ']' else -1
                     current_parameter = (current_parameter + N + d) % N
-                    change = 0
+                    parameter = control_parameters[current_parameter]
                 elif c in ['+', '=']: # change the current parameter
-                    change = 1
-                else:
-                    change = -1
-                pname = adjustable_parameters[current_parameter]
-                if pname == "step_size":
-                    if change != 0:
-                        step = step * 2 if change > 0 else step // 2
-                    pval = step
-                elif pname == "shutter_speed":
-                    if change > 0 and camera.shutter_speed <= 1000000:
-                        camera.shutter_speed = int(camera.shutter_speed * 2**0.25)
-                    elif change < 0 and camera.shutter_speed >= 1000:
-                        camera.shutter_speed = int(camera.shutter_speed * 0.5**0.25)
-                    pval = camera.shutter_speed
-                elif pname == "analog_gain":
-                    if change > 0 and camera.analog_gain <= 4:
-                        camera.analog_gain = (camera.analog_gain * 2**0.25)
-                    elif change < 0 and camera.analog_gain >= 0.1:
-                        camera.analog_gain = (camera.analog_gain * 0.5**0.25)
-                    pval = camera.analog_gain
-                elif pname == "digital_gain":
-                    if change > 0 and camera.digital_gain < 4:
-                        camera.digital_gain *= 1.25
-                    elif change < 0 and camera.digital_gain > 1:
-                        camera.digital_gain /= 1.25
-                    pval = camera.digital_gain
-                elif pname == "brightness":
-                    if change > 0 and camera.brightness <= 90:
-                        camera.brightness += 10
-                    if change < 0 and camera.brightness >= 10:
-                        camera.brightness -= 10
-                    pval = camera.brightness
-                elif pname == "contrast":
-                    if change > 0 and camera.contrast <= 90:
-                        camera.contrast += 10
-                    if change < 0 and camera.contrast >= 10:
-                        camera.contrast -= 10
-                    pval = camera.contrast
-                elif pname == "awb_gains":
-                    pval = (float(camera.awb_gains[0]),float(camera.awb_gains[1]))
-                elif pname == "position":
-                    pval = str(stage.position)
-                message = "{}: {}".format(pname, pval)
-                if pname is not None:
+                    parameter.change(1)
+                else: #c in ['-', ['_']:
+                    parameter.change(-1)
+                message = "{}: {}".format(parameter.name, parameter.value)
+                if parameter.name is not None:
                     print(message)
                     camera.annotate_text = message
                 else:
                     camera.annotate_text = ""
             elif c == "v":
                 #camera.start_preview(resolution=(1080*4//3,1080))
-                camera.start_preview(resolution=(489*4//3,480))
+                camera.start_preview(resolution=(480*4//3,480))
             elif c == "b":
                 camera.stop_preview()
             elif c == "j":

@@ -13,6 +13,8 @@ from contextlib import contextmanager, closing
 picam2_full_res = (3280, 2464)
 picam2_half_res = tuple([d/2 for d in picam2_full_res])
 picam2_quarter_res = tuple([d/4 for d in picam2_full_res])
+# The dicts below determine the settings that are loaded from, and saved to,
+# the npz settings file.  See extract_settings and load_microscope for details.
 picamera_init_settings = {"lens_shading_table": None, "resolution": tuple}
 picamera_later_settings = {"awb_mode":str, 
                            "awb_gains":tuple,
@@ -22,6 +24,32 @@ picamera_later_settings = {"awb_mode":str,
                            "brightness":"[()]",
                            "contrast":"[()]",
                            }
+
+def picamera_supports_lens_shading():
+    """Determine whether the picamera module supports lens shading.
+
+    As of March 2018, picamera did not wrap the necessary MMAL commands to
+    set the lens shading table, or to write the value of analog or digital
+    gain.  I have a forked version of the library that does support these.
+
+    For ease of use by people who don't want those features, this library
+    does not have a hard dependency on lens shading.  However, we need to
+    check in some places whether it's available.
+    """
+    return hasattr(PiCamera, "lens_shading_table")
+
+# For backwards compatibility, remove settings that aren't available
+if not picamera_supports_lens_shading():
+    # remove settings from the dictionaries that aren't available
+    del picamera_init_settings['lens_shading_table']
+    del picamera_later_settings['analog_gain']
+    del picamera_later_settings['digital_gain']
+    print("WARNING: the currently-installed picamera library does not support all "
+          "the features of the openflexure microscope software.  These features "
+          "include lens shading control and setting the analog/digital gain.\n"
+          "\n"
+          "See the installation instructions for how to fix this:\n"
+          "https://github.com/rwb27/openflexure_microscope_software")
 
 def round_resolution(res):
     """Round up the camera resolution to units of 32 and 16 in x and y"""
@@ -79,7 +107,10 @@ class Microscope(object):
             return output.array
 
     def freeze_camera_settings(self, iso=None, wait_before=2, wait_after=0.5):
-        """Turn off as much auto stuff as possible (except lens shading)"""
+        """Turn off as much auto stuff as possible (except lens shading)
+        
+        NB if the camera was created with load_microscope, this is not necessary.
+        """
         if iso is not None:
             self.camera.iso = iso
         time.sleep(wait_before)

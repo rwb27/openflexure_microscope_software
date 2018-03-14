@@ -41,12 +41,14 @@ setup(name = 'openflexure_microscope',
       install_requires = [
           'pyserial',
           'openflexure_stage',
+          'readchar',
           'numpy',
           'scipy',
           'matplotlib',
+          'picamera',
           ],
-      dependency_links = [
-          'https://github.com/rwb27/picamera/tarball/lens-shading'
+      dependency_links = [ # The aim is to be backwards-compatible; the lens shading is not required
+          #'https://github.com/rwb27/picamera/tarball/lens-shading'
           ],
       entry_points = {
           'console_scripts': [
