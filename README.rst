@@ -6,9 +6,9 @@ This repository contains the scripts that run the openflexure microscope.  The b
 
 Installation
 ------------
-The repository can be installed by cloning and running ``python setup.py install`` in the usual way - this also means you can install it using pip::
+The repository can be installed by cloning and running ``python setup.py install`` in the usual way - this also means you can install it using pip.  Open a command prompt on your Raspberry Pi, and ensure it is connected to the internet.  Then type::
 
-   pip install https://github.com/rwb27/openflexure_microscope_software/archive/master.zip
+   sudo pip install https://github.com/rwb27/openflexure_microscope_software/archive/master.zip
 
 This will, by default, ensure you have the dependencies installed, including ``picamera``.  This may have the unintended consequence of reverting to the official release of picamera; if you have previously installed my fork of picamera, you will need to reinstall it afterwards.  This will also automatically download and install the `libraries for the stage <https://github.com/rwb27/openflexure_nano_motor_controller>`_ via pip.
 
