@@ -155,6 +155,36 @@ class Microscope(object):
         "Save the microscope's current settings to an npz file"
         np.savez(npzfile, **self.settings_dict())
 
+    @property
+    def zoom(self):
+        """A scalar property that sets the zoom value of the camera.
+        
+        camera.zoom is a 4-element field of view specifying the region of the
+        sensor that is visible, this is a simple scalar, where 1 means the whole
+        FoV is returned and >1 means we zoom in (on the current centre of the
+        FoV, which may or may not be (0.5,0.5)
+        """
+        fov = self.camera.zoom
+        return 2.0/(fov[2] + fov[3])
+
+    @zoom.setter
+    def zoom(self, newvalue):
+        """Set the zoom of the camera, keeping the current image centre"""
+        if newvalue < 1.0:
+            newvalue = 1.0
+        fov = self.camera.zoom
+        centre = np.array([fov[0] + fov[2]/2.0, fov[1] + fov[3]/2.0])
+        size = 1.0/newvalue
+        # If the new zoom value would be invalid, move the centre to
+        # keep it within the camera's sensor (this is only relevant 
+        # when zooming out, if the FoV is not centred on (0.5, 0.5)
+        for i in range(2):
+            if np.abs(centre[i] - 0.5) + size/2 > 0.5:
+                centre[i] = 0.5 + (1.0 - size)/2 * np.sign(centre[i]-0.5)
+        print("setting zoom, centre {}, size {}".format(centre, size))
+        new_fov = (centre[0] - size/2, centre[1] - size/2, size, size)
+        self.camera.zoom = new_fov
+
 
 def extract_settings(source_dict, converters):
     """Extract a subset of a dictionary of settings.

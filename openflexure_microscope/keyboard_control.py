@@ -195,11 +195,17 @@ def control_parameters_from_microscope(microscope):
             InteractiveCameraParameter(cam, "digital_gain", 2**np.linspace(-2,2,9)),
             InteractiveCameraParameter(cam, "brightness", np.linspace(0,100,11), setter_conversion=int),
             InteractiveCameraParameter(cam, "contrast", np.linspace(-50,50,11), setter_conversion=int),
+            InteractiveCameraParameter(microscope, "zoom", 2**np.linspace(0,4,9)),
             ReadOnlyObjectParameter(cam, "awb_gains", filter_function=lambda (a, b): [float(a), float(b)]),
             ReadOnlyObjectParameter(stage, "position", filter_function=str),
             ]
 
-
+def parameter_with_name(name, parameter_list):
+    """Retrieve a parameter with the given name from a list"""
+    for p in parameter_list:
+        if p.name == name:
+            return p
+    raise KeyError("No parameter with the requested name was found.")
 
 def control_microscope_with_keyboard(output="./images"):
     filepath = validate_filepath(output)
@@ -218,7 +224,8 @@ def control_microscope_with_keyboard(output="./images"):
         fov = 1 # TODO: turn this into a proper camera parameter
         control_parameters = control_parameters_from_microscope(ms)
         current_parameter = 0
-        step_param = control_parameters[1] #TODO: select this based on name
+        step_param = parameter_with_name("step_size", control_parameters)
+        zoom_param = parameter_with_name("zoom", control_parameters)
         move_keys = {'w': [0,1,0],
                      'a': [1,0,0],
                      's': [0,-1,0],
@@ -232,17 +239,10 @@ def control_microscope_with_keyboard(output="./images"):
             elif c in move_keys.keys():
                 # move the stage with quake-style keys
                 stage.move_rel( np.array(move_keys[c]) * step_param.value)
-            elif c == "r":
-                step_param.change(1)
-            elif c == "f":
-                step_param.change(-1)
-            elif c == 'i':
-                fov *= 0.75
-                camera.zoom = (0.5-fov/2, 0.5-fov/2, fov, fov)
-            elif c == 'o':
-                if fov < 1.0:
-                    fov *= 4.0/3.0
-                camera.zoom = (0.5-fov/2, 0.5-fov/2, fov, fov)
+            elif c in ['r', 'f']:
+                step_param.change(1 if c=='r' else -1)
+            elif c in ['i', 'o']:
+                zoom_param.change(1 if c=='i' else -1)
             elif c in ['[', ']', '-', '_', '=', '+']:
                 if c in ['[', ']']: # scroll through parameters
                     N = len(control_parameters)
