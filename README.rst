@@ -6,30 +6,25 @@ This repository contains the scripts that run the openflexure microscope.  The b
 
 Installation
 ------------
-These scripts currently depend on a few things that aren't included in standard Raspbian and aren't easily installed with pip.  First, you need to install the updated `userland libraries <https://github.com/raspberrypi/userland>`_.  The simplest option is to download and compile - this takes around 15 mins on my Pi 3::
+There are a few packages that are required in order to run the microscope module.  While the package metadata will mean that ``pip`` tries to install them, it's time consuming (and not always possible) to install everything from scratch on the Pi.  It is much easier to use the packaged versions of the relevant modules from Raspbian.  Connect your Pi to the internet, open a command prompt, and type::
 
-   git clone https://github.com/raspberrypi/userland.git
-   cd userland
-   ./buildme
-   cd ..
+   sudo apt-get install python python-numpy python-matplotlib python-scipy python-opencv python-picamera
+
+You may already have these packages installed, in which case that's great!  The ``openflexure_microscope`` module can be installed using ``pip``.  Open a command prompt on your Raspberry Pi, and ensure it is connected to the internet.  Then type::
+
+   sudo pip install https://github.com/rwb27/openflexure_microscope_software/archive/master.zip
+
+This will, by default, ensure you have the dependencies installed, including ``picamera``.  This may have the unintended consequence of reverting to the official release of picamera; if you have previously installed my fork of picamera, you will need to reinstall it afterwards.  This will also automatically download and install the `libraries for the stage <https://github.com/rwb27/openflexure_nano_motor_controller>`_ via pip.
+
+In order to use the advanced features (lens shading correction and full analog/digital gain control) you need to install both the latest firmware and my updated fork of ``picamera``.  Happily these are both now one-liners.  To use the latest firmware (strictly speaking it's the userland libraries that we need), run::
+
+   sudo rpi-update stable
    
-After installing userland, you need to install `my fork of picamera <https://github.com/rwb27/picamera/tree/lens-shading>`_::
+If you don't have ``rpi-update`` installed, you can get it by doing ``sudo apt-get install rpi-update`` on Raspbian.  This will install the latest firmware, you need to reboot in order to activate it.  Next, you need to install `my fork of picamera <https://github.com/rwb27/picamera/tree/lens-shading>`_::
 
-   git clone https://github.com/rwb27/picamera.git
-   cd picamera
-   git checkout lens-shading
-   python setup.py install
-   cd ..
+   sudo pip install https://github.com/rwb27/picamera/archive/lens-shading.zip
    
-If you get a permissions error, it may be that you need to prefix the ``python setup.py install`` line with ``sudo`` or perhaps adjust your Python install location.
-
-After installing these libraries, you can install this software the same way::
-
-   git clone https://github.com/rwb27/openflexure_microscope_software.git
-   cd openflexure_microscope_software
-   python setup.py install
-   
-This will automatically download and install the `libraries for the stage <https://github.com/rwb27/openflexure_nano_motor_controller>`_ via pip.  Once you have installed the module, you can run an interactive microscope control program by running the command ``openflexure_microscope`` in the terminal.
+Once you have installed the module, you can run an interactive microscope control program by running the command ``openflexure_microscope`` in the terminal.
 
 Usage
 -----
