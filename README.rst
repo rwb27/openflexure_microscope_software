@@ -28,7 +28,9 @@ Once you have installed the module, you can run an interactive microscope contro
 
 Usage
 -----
-The module installs a command-line script.  Run ``openflexure_microscope`` to start an interactive control program, or ``openflexure_microscope help`` to see options.
+The module installs a command-line script.  Run ``openflexure_microscope`` to start an interactive control program, or ``openflexure_microscope --help`` to see options.  You can disable the motor controller by running ``openflexure_microscope --no_stage`` to run the software for the camera, without support for a motorised stage.  
+
+To recalibrate the microscope (which includes generating a new lens shading function), use ``openflexure_microscope --recalibrate``.  This requires you to first set the microscope up so that it is producing the most uniform image possible (i.e. the condenser lens must be properly aligned, and there must either be no sample present, or the sample must be well out of focus so it is not visible).  The camera will start up and run for a few seconds, then the lens shading table will be adjusted to make the image uniform, and the camera will run for another few seconds - the image at this point should be uniform.  Calibration settings (including lens shading and gain, etc.) will be saved to a file called ``microscope_settings.npz`` in the current directory, and this will be loaded by the interactive script the next time it is run.
 
 Development
 -----------

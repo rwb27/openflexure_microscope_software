@@ -221,9 +221,17 @@ def extract_settings(source_dict, converters):
     return settings
 
 
-#
+class DummyStage():
+    position = np.array([0,0,0])
+    def move(self, *args, **kwargs):
+        pass
+    def move_rel(self, *args, **kwargs):
+        pass
+    def close(self):
+        pass
+
 @contextmanager
-def load_microscope(npzfile=None, save_settings=False, **kwargs):
+def load_microscope(npzfile=None, save_settings=False, dummy_stage=True, **kwargs):
     """Create a microscope object with specified settings. (context manager)
 
     This will read microscope settings from a .npz file, and/or from
@@ -251,8 +259,8 @@ def load_microscope(npzfile=None, save_settings=False, **kwargs):
     else:
         stage_port = None
 
-
-    with closing(OpenFlexureStage(stage_port)) as stage, \
+    # Open the hardware connections
+    with closing(DummyStage() if dummy_stage else OpenFlexureStage(stage_port)) as stage, \
          closing(PiCamera(**extract_settings(settings, picamera_init_settings))) as camera:
         ms = Microscope(camera, stage)
         for k, v in extract_settings(settings, picamera_later_settings).items():
@@ -262,7 +270,6 @@ def load_microscope(npzfile=None, save_settings=False, **kwargs):
             if save_settings is True:
                 save_settings = npzfile
             ms.save_settings(save_settings)
-
 
 
 if __name__ == "__main__":
