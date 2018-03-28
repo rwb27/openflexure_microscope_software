@@ -6,7 +6,11 @@ This repository contains the scripts that run the openflexure microscope.  The b
 
 Installation
 ------------
-The repository can be installed by cloning and running ``python setup.py install`` in the usual way - this also means you can install it using pip.  Open a command prompt on your Raspberry Pi, and ensure it is connected to the internet.  Then type::
+There are a few packages that are required in order to run the microscope module.  While the package metadata will mean that ``pip`` tries to install them, it's time consuming (and not always possible) to install everything from scratch on the Pi.  It is much easier to use the packaged versions of the relevant modules from Raspbian.  Connect your Pi to the internet, open a command prompt, and type::
+
+   sudo apt-get install python python-numpy python-matplotlib python-scipy python-opencv python-picamera
+
+You may already have these packages installed, in which case that's great!  The ``openflexure_microscope`` module can be installed using ``pip``.  Open a command prompt on your Raspberry Pi, and ensure it is connected to the internet.  Then type::
 
    sudo pip install https://github.com/rwb27/openflexure_microscope_software/archive/master.zip
 
