@@ -224,6 +224,7 @@ def control_microscope_with_keyboard(output="./images", dummy_stage=False):
         fov = 1 # TODO: turn this into a proper camera parameter
         control_parameters = control_parameters_from_microscope(ms)
         current_parameter = 0
+        parameter = control_parameters[current_parameter]
         step_param = parameter_with_name("step_size", control_parameters)
         zoom_param = parameter_with_name("zoom", control_parameters)
         move_keys = {'w': [0,1,0],
@@ -268,7 +269,7 @@ def control_microscope_with_keyboard(output="./images", dummy_stage=False):
                 n = 0
                 while os.path.isfile(os.path.join(filepath % n)):
                     n += 1
-                camera.capture(filepath % n, format="jpg", bayer=True)
+                camera.capture(filepath % n, format="jpeg", bayer=True)
                 camera.annotate_text="Saved '%s'" % (filepath % n)
                 time.sleep(0.5)
                 camera.annotate_text=""
