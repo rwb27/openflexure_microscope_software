@@ -221,7 +221,6 @@ def control_microscope_with_keyboard(output="./images", dummy_stage=False):
               "[/] to select camera parameters, and +/- to adjust them\n"
               "j to save jpeg file, k to change output path.\n"
               "x to quit")
-        fov = 1 # TODO: turn this into a proper camera parameter
         control_parameters = control_parameters_from_microscope(ms)
         current_parameter = 0
         parameter = control_parameters[current_parameter]
