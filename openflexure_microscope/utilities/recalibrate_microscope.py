@@ -65,9 +65,10 @@ def recalibrate_microscope(output_fname="microscope_settings.npz"):
             for dy in np.arange(box) - box//2:
                 ls_channel[:,:] += padded_image_channel[16+dx::32,16+dy::32]
         ls_channel /= box**2
-        # Everything is normalised relative to the centre value.  I follow 6by9's
-        # example and average the central 64 pixels in each channel.
-        ls_channel /= np.mean(image_channel[iw//2-4:iw//2+4, ih//2-4:ih//2+4])
+        # The original C code written by 6by9 normalises to the central 64 pixels in each channel.
+        #ls_channel /= np.mean(image_channel[iw//2-4:iw//2+4, ih//2-4:ih//2+4])
+        # I have had better results just normalising to the maximum:
+        ls_channel /= np.max(ls_channel)
         # NB the central pixel should now be *approximately* 1.0 (may not be exactly
         # due to different averaging widths between the normalisation & shading table)
         # For most sensible lenses I'd expect that 1.0 is the maximum value.
@@ -83,6 +84,7 @@ def recalibrate_microscope(output_fname="microscope_settings.npz"):
     settings['lens_shading_table'] = lens_shading_table
     np.savez(output_fname, **settings)
     print("Lens shading table written to {}".format(output_fname))
+    print("Using dev version")
     with microscope.load_microscope(output_fname) as ms:
         ms.camera.start_preview(resolution=(1080*4//3, 1080))
         time.sleep(3)
