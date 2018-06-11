@@ -1,5 +1,7 @@
 # Microscope optical calibration scripts
 
+**The scripts in this folder are now mostly defunct - use the image stack feature in the interactive mode of openflexure_microscope to acquire the sequences of images instead.**
+
 The scripts in this folder take a series of measurements that can be used to characterise the optical performance of a microscope.  For details of what parameters are measured and how the images are analysed, see the [usaf analysis repository](https://github.com/rwb27/usaf_analysis/).  In brief, it should measure resolution, field curvature, field distortion, and (if you use a USAF target) magnification.  To download these scripts without cloning the repository, use the "raw" links as described in my [wiki article](https://github.com/rwb27/openflexure_microscope/wiki/Downloading-STL-files-from-GitHub).
 
 ## Controlling the Raspberry Pi
