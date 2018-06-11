@@ -66,20 +66,33 @@ def gains_to_lst(gains):
     lst = gains / np.min(gains)*32 # minimum gain is 32 (= unity gain)
     lst[lst > 255] = 255 # clip at 255
     return lst.astype(np.uint8)
-
-if __name__ == '__main__':
-    try:
-        output_fname = sys.argv[1]
-    except:
-        output_fname = "microscope_settings.npz"
+    
+def generate_lens_shading_table_closed_loop(output_fname="microscope_settings.npz", 
+                                            n_iterations=5,
+                                            images_to_average=5):
+    """Reset the camera's parameters, and recalibrate the lens shading to get unifrom images.
+    
+    This function requires the microscope to be set up with a blank, uniformly 
+    illuminated field of view.  When it runs, it first auto-exposes, then fixes 
+    the gains/shutter speed and resets the lens shading correction to a unity
+    gain.  Rather than take a single raw image and calibrate from that (as 
+    done in the open loop version, which is a more or less direct Python port 
+    of 6by9's C code), we do it incrementally.  Each iteration (of a default 5)
+    consists of acquiring a processed RGB image, then adjusting the lens shading
+    table to make it uniform.  It seems that doing this 3-5 times gives much 
+    better results than just doing it once.
+    
+    At the end, all camera settings are saved into the output file, where they
+    can be used to set up a microscope with `load_microscope`.
+    """
+    print("Regenerating the camera settings, including lens shading.")
+    print("This will only work if the camera is looking at something uniform and white.")
     # Start by loading the raw image from the Pi camera.  This creates a ``picamera.PiBayerArray``.
     with picamera.PiCamera() as cam:
         lens_shading_table = np.zeros(cam._lens_shading_table_shape(), dtype=np.uint8) + 32
         gains = np.ones_like(lens_shading_table, dtype=np.float)
         max_res = cam.MAX_RESOLUTION
     # Open the microscope and start with flat (i.e. no) lens shading correction.
-    n_iterations = 5
-    figure, axgrid = plt.subplots(3, n_iterations)
     with microscope.load_microscope(lens_shading_table=lens_shading_table,
                                     resolution=max_res) as ms:
         ms.camera.start_preview(resolution=(1080*4/3, 1080))
@@ -96,7 +109,7 @@ if __name__ == '__main__':
             print("Optimising lens shading, pass {}/{}".format(i+1, n_iterations))
             # Take an RGB (i.e. processed) image, and calculate the change needed in the shading table
             images = [] #averaging to reduce noise
-            for j in range(5):
+            for j in range(images_to_average):
                 images.append(get_rgb_image())
             rgb_image = np.mean(images, axis=0, dtype=np.float)
             incremental_gains = lens_shading_correction_from_rgb(rgb_image, 64//2)
@@ -104,10 +117,6 @@ if __name__ == '__main__':
             # Apply this change (actually apply a bit less than the change)
             ms.camera.lens_shading_table = gains_to_lst(gains*32)
             time.sleep(2)
-            for j in range(3):
-                axgrid[0,i].plot(gains[j,gains.shape[0]//2,:])
-                axgrid[2,i].plot(incremental_gains[j,gains.shape[0]//2,:])
-            axgrid[1,i].imshow(gains[1,:,:])
 
         # Fix the AWB gains so the image is neutral
         channel_means = np.mean(np.mean(get_rgb_image(), axis=0, dtype=np.float), axis=0)
@@ -128,5 +137,9 @@ if __name__ == '__main__':
         print("{}: {}".format(k, settings[k]))
     np.savez(output_fname, **settings)
     print("Lens shading table written to {}".format(output_fname))
-    plt.show()
 
+if __name__ == '__main__':
+    try:
+        generate_lens_shading_table_closed_loop(sys.argv[1])
+    except:
+        generate_lens_shading_table_closed_loop()
