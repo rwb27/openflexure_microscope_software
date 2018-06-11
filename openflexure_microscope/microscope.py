@@ -9,6 +9,7 @@ import time
 import matplotlib.pyplot as plt
 from openflexure_stage import OpenFlexureStage
 from contextlib import contextmanager, closing
+import os
 
 picam2_full_res = (3280, 2464)
 picam2_half_res = tuple([d/2 for d in picam2_full_res])
@@ -58,7 +59,7 @@ def round_resolution(res):
 def decimate_to(shape, image):
     """Decimate an image to reduce its size if it's too big."""
     decimation = np.max(np.ceil(np.array(image.shape, dtype=np.float)[:len(shape)]/np.array(shape)))
-    return image[::decimation, ::decimation, ...]
+    return image[::int(decimation), ::int(decimation), ...]
 
 def sharpness_sum_lap2(rgb_image):
     """Return an image sharpness metric: sum(laplacian(image)**")"""
@@ -73,12 +74,34 @@ def sharpness_edge(image):
     edge = np.array([[-1]*n + [1]*n])
     return np.sum([np.sum(ndimage.filters.convolve(gray,W)**2) 
                    for W in [edge, edge.T]])
+@contextmanager
+def set_properties(obj, **kwargs):
+    """A context manager to set, then reset, certain properties of an object.
+    
+    The first argument is the object, subsequent keyword arguments are properties
+    of said object, which are set initially, then reset to their previous values.
+    """
+    saved_properties = {}
+    for k in kwargs.keys():
+        try:
+            saved_properties[k] = getattr(obj, k)
+        except AttributeError:
+            print("Warning: could not get {} on {}.  This property will not be restored!".format(k, obj))
+    for k, v in kwargs.items():
+        setattr(obj, k, v)
+    try:
+        yield
+    finally:
+        for k, v in saved_properties.items():
+            setattr(obj, k, v)
+
 
 class Microscope(object):
     def __init__(self, camera=None, stage=None):
         """Create the microscope object.  The camera and stage should already be initialised."""
         self.camera = camera
         self.stage = stage
+        self.stage.backlash = np.zeros(3, dtype=np.int)
 
     def close(self):
         """Shut down the microscope hardware."""
@@ -122,7 +145,7 @@ class Microscope(object):
         print("Camera settings are frozen.  Analogue gain: {}, Digital gain: {}, Exposure speed: {}, AWB gains: {}".format(self.camera.analog_gain, self.camera.digital_gain, self.camera.exposure_speed, self.camera.awb_gains))
         time.sleep(wait_after)
 
-    def autofocus(self, dz, backlash=0, settle=0.5, metric_fn=sharpness_sum_lap2):
+    def autofocus(self, dz, settle=0.5, metric_fn=sharpness_sum_lap2):
         """Perform a simple autofocus routine.
 
         The stage is moved to z positions (relative to current position) in dz,
@@ -132,17 +155,51 @@ class Microscope(object):
 
         dz is assumed to be in ascending order (starting at -ve values)
         """
-        sharpnesses = []
-        positions = []
-        for i in self.stage.scan_z(dz):
-            positions.append(self.stage.position[2])
-            time.sleep(settle)
-            sharpnesses.append(metric_fn(self.rgb_image(
-                        use_video_port=True, 
-                        resize=(640,480))))
-        newposition = positions[np.argmax(sharpnesses)]
-        self.stage.focus_rel(newposition - self.stage.position[2], backlash=backlash)
-        return positions, sharpnesses
+        with set_properties(self.stage, backlash=256):
+            sharpnesses = []
+            positions = []
+            self.camera.annotate_text = ""
+            for i in self.stage.scan_z(dz, return_to_start=False):
+                positions.append(self.stage.position[2])
+                time.sleep(settle)
+                sharpnesses.append(metric_fn(self.rgb_image(
+                            use_video_port=True, 
+                            resize=(640,480))))
+            newposition = positions[np.argmax(sharpnesses)]
+            self.stage.focus_rel(newposition - self.stage.position[2])
+            return positions, sharpnesses
+
+    def acquire_image_stack(self, step_displacement, n_steps, output_dir, raw=False):
+        """Scan an edge across the field of view, to measure distortion.
+
+        You should start this routine with the edge positioned in the centre of the
+        microscope's field of view.  You specify the x,y,z shift between images, and
+        the number of images - these points will be distributed either side of where
+        you start.
+
+        step_displacement: a 3-element array/list specifying the step (if a scalar
+            is passed, it's assumed to be Z)
+        n_steps: the number of steps to take
+        output_dir: the directory in which to save images
+        backlash: the backlash correction amount (default: 128 steps)
+        """
+        # Ensure the displacement per step is an array, and that scalars do z steps
+        step_displacement = np.array(step_displacement)
+        if len(step_displacement.shape) == 0:
+            step_displacement = np.array([0, 0, step_displacement.value])
+        elif step_displacement.shape == (1,):
+            step_displacement = np.array([0, 0, step_displacement[0]])
+        ii = np.arange(n_steps) - (n_steps - 1.0)/2.0 # an array centred on zero
+        scan_points = ii[:, np.newaxis] * step_displacement[np.newaxis, :]
+
+        with set_properties(self.stage, backlash=256):
+            for i in self.stage.scan_linear(scan_points):
+                time.sleep(1)
+                filepath = os.path.join(output_dir,"image_%03d_x%d_y%d_z%d.jpg" % 
+                                                   ((i,) + tuple(self.stage.position)))
+                print("capturing {}".format(filepath))
+                self.camera.capture(filepath, use_video_port=False, bayer=raw)
+            time.sleep(0.5)
 
     def settings_dict(self):
         """Return all the relevant settings as a dictionary."""

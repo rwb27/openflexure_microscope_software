@@ -60,23 +60,6 @@ def parse_command_line_arguments():
     args = parser.parse_args()
     return args
 
-def adjust_attribute(obj, attrname, action, linear_increment=None, log_factor=None, minv=None, maxv=None):
-    """Increment, decrement, or change the value of a property.
-    
-    Arguments:
-        
-    obj: the object on which the property is to be adjusted
-    attrname: a string naming the property to be adjusted
-    action: a positive or negative number if the property is to be 
-        increased or decreased.  None for no change, and "?" to
-        prompt the user to enter a value.
-    linear_increment: a number that is added/subtracted
-    log_factor: a number by which the property is multiplied/divided
-    minv: a value below which the property can't be decreased
-    maxv: a value above which the property can't be increased
-    """
-    pass #pval = getattr(obj, attrname)
-
 class InteractiveParameter(object):
     """This class is intended to allow a setting to be easily controlled.
 
@@ -139,6 +122,33 @@ class InteractiveParameter(object):
         if i >= 0 and i < N:
             self.value = self.allowed_values[i]
 
+class FunctionParameter(InteractiveParameter):
+    def __init__(self, name, function, args=[], kwargs={}):
+        """Create a 'parameter' to run a function.
+
+        name: the name of the function
+        function: the callable to run
+        args, kwargs: arguments for the above
+        """
+        self.name = name
+        self.function = function
+        self.f_args = args
+        self.f_kwargs = kwargs
+
+    @property
+    def value(self):
+        return "press +"
+    @value.setter
+    def value(self):
+        print("Cannot set the value of a function parameter")
+
+    def current_index(self):
+        return 0
+
+    def change(self, step):
+        self.function(*self.f_args, **self.f_kwargs)
+
+
 class InteractiveCameraParameter(InteractiveParameter):
     """An InteractiveParameter to control a camera property."""
     def __init__(self, camera, name, allowed_values, getter_conversion=lambda x: x, setter_conversion=lambda x: x, **kwargs):
@@ -182,6 +192,22 @@ class ReadOnlyObjectParameter(InteractiveParameter):
     def change(self, d):
         pass
 
+def image_stack(ms, raw=False):
+    """Acquire a stack of images, prompting the operator for parameters"""
+    ms.camera.stop_preview()
+    try:
+        output_dir = os.path.expanduser(raw_input("Output directory: "))
+        os.mkdir(output_dir)
+        step_size = [int(raw_input("{} step size: ".format(ax))) for ax in ['X', 'Y', 'Z']]
+        n_steps = int(raw_input("Number of images: "))
+        ms.camera.start_preview()
+        ms.camera.annotate_text = ""
+        ms.acquire_image_stack(step_size, n_steps, output_dir, raw=raw)
+        ms.camera.annotate_text = "Acquired {} images to {}".format(n_steps, output_dir)
+        time.sleep(1)
+    except Exception as e:
+        print "Error: {}".format(e)
+
 
 def control_parameters_from_microscope(microscope):
     """Create a list of InteractiveParameter objects to control a microscope."""
@@ -193,6 +219,11 @@ def control_parameters_from_microscope(microscope):
             InteractiveCameraParameter(cam, "shutter_speed", 10.0**np.linspace(2,5,28), setter_conversion=int),
             InteractiveCameraParameter(cam, "analog_gain", 2**np.linspace(-2,2,9)),
             InteractiveCameraParameter(cam, "digital_gain", 2**np.linspace(-2,2,9)),
+            FunctionParameter("coarse autofocus", microscope.autofocus, [np.linspace(-1280,1280,11)]),
+            FunctionParameter("medium autofocus", microscope.autofocus, [np.linspace(-320,320,11)]),
+            FunctionParameter("fine autofocus", microscope.autofocus, [np.linspace(-80,80,11)]),
+            FunctionParameter("image stack", image_stack, [microscope]),
+            FunctionParameter("image stack [raw]", image_stack, [microscope], {'raw':False}),
             InteractiveCameraParameter(cam, "brightness", np.linspace(0,100,11), setter_conversion=int),
             InteractiveCameraParameter(cam, "contrast", np.linspace(-50,50,11), setter_conversion=int),
             InteractiveCameraParameter(microscope, "zoom", 2**np.linspace(0,4,9)),
