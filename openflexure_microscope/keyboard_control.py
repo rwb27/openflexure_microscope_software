@@ -238,10 +238,10 @@ def parameter_with_name(name, parameter_list):
             return p
     raise KeyError("No parameter with the requested name was found.")
 
-def control_microscope_with_keyboard(output="./images", dummy_stage=False):
+def control_microscope_with_keyboard(output="./images", dummy_stage=False, settings_file="microscope_settings.npz"):
     filepath = validate_filepath(output)
 
-    with load_microscope("microscope_settings.npz", dummy_stage=dummy_stage) as ms:
+    with load_microscope(settings_file, dummy_stage=dummy_stage) as ms:
         camera = ms.camera
         stage = ms.stage
         camera.annotate_text_size=50
