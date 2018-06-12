@@ -223,7 +223,7 @@ def control_parameters_from_microscope(microscope):
             FunctionParameter("medium autofocus", microscope.autofocus, [np.linspace(-320,320,11)]),
             FunctionParameter("fine autofocus", microscope.autofocus, [np.linspace(-80,80,11)]),
             FunctionParameter("image stack", image_stack, [microscope]),
-            FunctionParameter("image stack [raw]", image_stack, [microscope], {'raw':False}),
+            FunctionParameter("image stack [raw]", image_stack, [microscope], {'raw':True}),
             InteractiveCameraParameter(cam, "brightness", np.linspace(0,100,11), setter_conversion=int),
             InteractiveCameraParameter(cam, "contrast", np.linspace(-50,50,11), setter_conversion=int),
             InteractiveCameraParameter(microscope, "zoom", 2**np.linspace(0,4,9)),
