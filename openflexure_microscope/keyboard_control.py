@@ -25,7 +25,7 @@ import numpy as np
 import picamera
 from readchar import readchar, readkey
 from openflexure_stage import OpenFlexureStage
-from microscope import load_microscope
+from .microscope import load_microscope
 
 def validate_filepath(filepath):
     """Check the filepath is valid, creating dirs if needed
@@ -196,17 +196,17 @@ def image_stack(ms, raw=False):
     """Acquire a stack of images, prompting the operator for parameters"""
     ms.camera.stop_preview()
     try:
-        output_dir = os.path.expanduser(raw_input("Output directory: "))
+        output_dir = os.path.expanduser(input("Output directory: "))
         os.mkdir(output_dir)
-        step_size = [int(raw_input("{} step size: ".format(ax))) for ax in ['X', 'Y', 'Z']]
-        n_steps = int(raw_input("Number of images: "))
+        step_size = [int(input("{} step size: ".format(ax))) for ax in ['X', 'Y', 'Z']]
+        n_steps = int(input("Number of images: "))
         ms.camera.start_preview()
         ms.camera.annotate_text = ""
         ms.acquire_image_stack(step_size, n_steps, output_dir, raw=raw)
         ms.camera.annotate_text = "Acquired {} images to {}".format(n_steps, output_dir)
         time.sleep(1)
     except Exception as e:
-        print "Error: {}".format(e)
+        print("Error: {}".format(e))
 
 
 def control_parameters_from_microscope(microscope):
@@ -227,7 +227,7 @@ def control_parameters_from_microscope(microscope):
             InteractiveCameraParameter(cam, "brightness", np.linspace(0,100,11), setter_conversion=int),
             InteractiveCameraParameter(cam, "contrast", np.linspace(-50,50,11), setter_conversion=int),
             InteractiveCameraParameter(microscope, "zoom", 2**np.linspace(0,4,9)),
-            ReadOnlyObjectParameter(cam, "awb_gains", filter_function=lambda (a, b): [float(a), float(b)]),
+            ReadOnlyObjectParameter(cam, "awb_gains", filter_function=lambda a_b: [float(a_b[0]), float(a_b[1])]),
             ReadOnlyObjectParameter(stage, "position", filter_function=str),
             ]
 
@@ -267,7 +267,7 @@ def control_microscope_with_keyboard(output="./images", dummy_stage=False, setti
             c = readkey()
             if c == 'x': #quit
                 break
-            elif c in move_keys.keys():
+            elif c in list(move_keys.keys()):
                 # move the stage with quake-style keys
                 stage.move_rel( np.array(move_keys[c]) * step_param.value)
             elif c in ['r', 'f']:
@@ -305,7 +305,7 @@ def control_microscope_with_keyboard(output="./images", dummy_stage=False, setti
                 camera.annotate_text=""
             elif c == "k":
                 camera.stop_preview()
-                new_filepath = raw_input("The new output location can be a directory or \n"
+                new_filepath = input("The new output location can be a directory or \n"
                                          "a filepath.  Directories will be created if they \n"
                                          "don't exist, filenames must contain '%d' and '.jp'.\n"
                                          "New filepath: ")
