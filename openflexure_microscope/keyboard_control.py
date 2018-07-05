@@ -15,7 +15,7 @@ Options:
       --output=<filepath>   Set output directory/filename [default: ~/Desktop/images]
       -h --help             Show this screen.
 """
-
+from __future__ import print_function
 import io
 import sys
 import os
@@ -23,6 +23,7 @@ import time
 import argparse
 import numpy as np
 import picamera
+from builtins import input
 from readchar import readchar, readkey
 from openflexure_stage import OpenFlexureStage
 from .microscope import load_microscope
