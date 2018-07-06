@@ -40,6 +40,7 @@ setup(name = 'openflexure_microscope',
           ],
       install_requires = [
           'pyserial',
+          'future',
           'openflexure_stage',
           'readchar',
           'numpy',
