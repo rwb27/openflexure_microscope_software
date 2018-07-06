@@ -204,7 +204,7 @@ class Microscope(object):
     def settings_dict(self):
         """Return all the relevant settings as a dictionary."""
         settings = {}
-        for k in picamera_later_settings.keys() + picamera_init_settings.keys():
+        for k in list(picamera_later_settings.keys()) + list(picamera_init_settings.keys()):
             settings[k] = getattr(self.camera, k)
         return settings
 

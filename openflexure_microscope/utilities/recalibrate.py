@@ -42,7 +42,7 @@ def lens_shading_correction_from_rgb(rgb_array, binsize=64):
         # horizontally, but not vertically.
         for dx in np.arange(box) - box//2:
             for dy in np.arange(box) - box//2:
-                ls_channel[:,:] += padded_image_channel[binsize/2+dx::binsize,binsize/2+dy::binsize]
+                ls_channel[:,:] += padded_image_channel[binsize//2+dx::binsize,binsize//2+dy::binsize]
         ls_channel /= box**2
         # Everything is normalised relative to the centre value.  I follow 6by9's
         # example and average the central 64 pixels in each channel.
