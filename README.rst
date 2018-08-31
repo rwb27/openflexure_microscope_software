@@ -10,9 +10,13 @@ There are a few packages that are required in order to run the microscope module
 
    sudo apt-get install python python-numpy python-matplotlib python-scipy python-opencv python-picamera
 
-You may already have these packages installed, in which case that's great!  The ``openflexure_microscope`` module can be installed using ``pip``.  Open a command prompt on your Raspberry Pi, and ensure it is connected to the internet.  Then type::
+You may already have these packages installed, in which case that's great!  To make sure `pip` makes use of these packages, you should now type:
 
-   sudo pip install https://github.com/rwb27/openflexure_microscope_software/archive/master.zip
+   export PIP_IGNORE_INSTALLED=0
+   
+A recent change in the way `pip` works on Debian made that line necessary.  The ``openflexure_microscope`` module can be installed using ``pip``.  Open a command prompt on your Raspberry Pi, and ensure it is connected to the internet.  Then type::
+
+   sudo pip install --system https://github.com/rwb27/openflexure_microscope_software/archive/master.zip
 
 This will, by default, ensure you have the dependencies installed, including ``picamera``.  This may have the unintended consequence of reverting to the official release of picamera; if you have previously installed my fork of picamera, you will need to reinstall it afterwards.  This will also automatically download and install the `libraries for the stage <https://github.com/rwb27/openflexure_nano_motor_controller>`_ via pip.
 
@@ -20,7 +24,7 @@ If your version of Raspbian is older than March 2018, you might not have the lat
 
 In order to use the advanced features (lens shading correction and full analog/digital gain control) you need to install  `my fork of picamera <https://github.com/rwb27/picamera/tree/lens-shading>`_::
 
-   sudo pip install https://github.com/rwb27/picamera/archive/lens-shading.zip
+   sudo pip install --system https://github.com/rwb27/picamera/archive/lens-shading.zip
    
 Once you have installed the module, you can run an interactive microscope control program by running the command ``openflexure_microscope`` in the terminal (see below).  You can safely skip the installation of my forked ``picamera`` library, but you will get a warning and some features won't work.  If you've not used your camera before, you may need to enable the camera module using ``sudo raspi-config`` and choosing "interfacing options" then "enable/disable camera".  You will need to reboot afterwards.
 
