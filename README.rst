@@ -6,15 +6,15 @@ This repository contains the scripts that run the openflexure microscope.  The b
 
 Installation
 ------------
-Prerequisites
-~~~~~~~~~~~~~
+Before you start
+~~~~~~~~~~~~~~~~
 The microscope software can be installed using `pip`, which is now much simpler thanks to the absolutely brilliant PiWheels_.  If you are using the latest Raspbian image (October 2018) this should be set up for you already.  If not, you just need to add a line to ``/etc/pip.conf`` (see the PiWheels_ web page for instructions).  You will need a working internet connection for the commands below to work.
 
 If you haven't previously used ``numpy`` or ``scipy`` you may need to install some numerical libraries.  Open up a command prompt window and type::
 
    sudo apt-get install libatlas-base-dev libjasper-dev
 
-You will also need to `set up the camera`_ and, ideally, increase the GPU memory split to 256Mb, by running ``sudo raspi-config``.
+You will also need to `set up the camera`_ and, ideally, increase the GPU memory split to 256Mb, by running ``sudo raspi-config``.  You should first navigate to "interfacing options" and then "camera", and second you should choose "advanced options" and "memory split" to enter 256Mb.  You will be asked to restart when you're done.
 
 We recommend installing in a virtual environment, so that the microscope software doesn't interfere with your system Python distribution.  You can do this with::
 
@@ -22,11 +22,13 @@ We recommend installing in a virtual environment, so that the microscope softwar
    $ virtualenv -p /usr/bin/python3 microscope
    $ source microscope/bin/activate
    
-When you are done, type ``deactivate`` to leave the virtual environment
+Whenever you want to use the microscope, you should first activate the environament by typing ``source microscope/bin/activate``.  You should see the command prompt change, showing you're using the virtual environment.  When you are done, type ``deactivate`` to leave the virtual environment and switch back to using your system's Python installation.
 
 Download and install
 ~~~~~~~~~~~~~~~~~~~~
-You should now download and install the microscope software::
+You should now switch to your virtual environment and download and install the microscope software (skip the ``source activate`` line if you are not using a virtual environment)::
+
+   source microscope/bin/activate
 
    wget https://github.com/rwb27/openflexure_nano_motor_controller/archive/master.zip
    pip install master.zip
@@ -48,9 +50,11 @@ Once you have installed the module, you can run an interactive microscope contro
 
 Usage
 -----
-If you are using a virtual environment as recommended above, you'll need to switch to that environment first::
+If you are using a virtual environment as recommended above, you'll need to switch to that environment first, then run the microscope software::
 
    source microscope/bin/activate
+   openflexure_microscope --help
+   openflexure_microscope
 
 The module installs a command-line script, so you can run ``openflexure_microscope`` to start an interactive control program, or ``openflexure_microscope --help`` to see options.  You can disable the motor controller by running ``openflexure_microscope --no_stage`` to run the software for the camera, without support for a motorised stage.  
 
@@ -58,15 +62,11 @@ To recalibrate the microscope (which includes generating a new lens shading func
 
 Development
 -----------
-If you want to be able to modify the scripts, instead of installing with ``python setup.py install``, use ``python setup.py develop``.  This leaves the scripts in the folder where they have been downloaded, but still links them into your system's Python path.  That will allow you to run them as normal, but makes them easier to edit.  Don't forget to commit your changes to Github - this may be easier if you first fork the repository on Github, then clone and install your copy of it.  This is relatively simple: first, click the "fork" button at the top right of this repository's page - that will create a repository in your account.  Next, go to that repository, and copy the URL from the "clone or download" link.  It should look like ``https://github.com/your_username/openflexure_microscope_software.git``.  Then, replace my URL with yours, and run the same commands::
+If you want to be able to modify the scripts, instead of installing with ``python setup.py install``, use ``python setup.py develop``.  This leaves the scripts in the folder where they have been downloaded, but still links them into your system's Python path.  That will allow you to run them as normal, but makes them easier to edit.  Don't forget to commit your changes to Github - this may be easier if you first fork the repository on Github, then clone and install your copy of it.  This is relatively simple: first, click the "fork" button at the top right of this repository's page - that will create a repository in your account.  Next, go to that repository, and copy the URL from the "clone or download" link.  It should look like ``https://github.com/<<your_username>>/openflexure_microscope_software.git`` where ``<<your_username>>`` is replaced with your username on GitHub.  Then, replace my URL with yours, and run the same commands::
 
-   git clone https://github.com/your_username/openflexure_microscope_software.git
+   git clone https://github.com/<<your_username>>/openflexure_microscope_software.git
    cd openflexure_microscope_software
    python setup.py develop
-
-Characterisation scripts
-------------------------
-The `microscope_characterisation folder <./microscope_characterisation>`_ contains scripts for measuring the resolution, distortion, and pixels-to-microns calibration.  These are intended to produce images you then analyse with the [USAF analysis scripts](https://github.com/rwb27/usaf_analysis).
 
 .. _PiWheels: https://www.piwheels.org/
 .. _`set up the camera`: https://www.raspberrypi.org/documentation/configuration/camera.md
